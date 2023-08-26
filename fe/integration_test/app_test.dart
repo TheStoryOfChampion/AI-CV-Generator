@@ -1,19 +1,19 @@
-import 'package:ai_cv_generator/pages/Register.dart';
-import 'package:ai_cv_generator/pages/home.dart';
-import 'package:ai_cv_generator/pages/login.dart';
-import 'package:ai_cv_generator/pages/Register.dart';
-import 'package:ai_cv_generator/pages/personaldetails.dart';
-import 'package:ai_cv_generator/pages/qualifications.dart';
-import 'package:ai_cv_generator/pages/references.dart';
-import 'package:ai_cv_generator/pages/skills.dart';
+import 'package:ai_cv_generator/pages/screens/Register.dart';
+import 'package:ai_cv_generator/pages/employment2.dart';
+import 'package:ai_cv_generator/pages/screens/home.dart';
+import 'package:ai_cv_generator/pages/screens/login.dart';
+import 'package:ai_cv_generator/pages/screens/Register.dart';
+import 'package:ai_cv_generator/pages/personaldetails2.dart';
+import 'package:ai_cv_generator/pages/screens/profile.dart';
+import 'package:ai_cv_generator/pages/qualifications2.dart';
+import 'package:ai_cv_generator/pages/references2.dart';
+import 'package:ai_cv_generator/pages/skills2.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
-import 'package:mockito/mockito.dart';
-
+import 'package:ai_cv_generator/models/user/UserModel.dart';
 import 'package:ai_cv_generator/main.dart' as app;
 
-class MockNavigatorObserver extends Mock implements NavigatorObserver {}
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
@@ -58,7 +58,7 @@ void main() {
         expect(find.text('12 Somewhere Street, Anyplace'), findsOneWidget);
         //expect(find.byType(ElevatedButton), findsOneWidget);
     });
-
+    
     testWidgets('Qualifications details page',
       (WidgetTester tester) async {
         //app.main();
@@ -75,6 +75,28 @@ void main() {
         expect(find.text('University of Pretoria'), findsOneWidget);
         expect(find.text('BSc Computer Science'), findsOneWidget);
         //expect(find.text('04/2024'), findsOneWidget);
+        //expect(find.byType(ElevatedButton), findsOneWidget);
+    });
+
+    
+      testWidgets('Employment details page',
+      (WidgetTester tester) async {
+        //app.main();
+        await tester.pumpWidget(const MaterialApp(home: EmploymentDetailsForm()));
+        await tester.pumpAndSettle();
+        //do
+        await tester.enterText(find.byKey(const Key('Company input')), 'Dynamic Visual Technologies');
+        await tester.enterText(find.byKey(const Key('Job Title input')), 'Junior Software Developer');
+        //await tester.enterText(find.byKey(const Key('Employment start')), '05/2024');
+        //await tester.enterText(find.byKey(const Key('Employment end')), 'current');
+      
+        await tester.pumpAndSettle();
+
+        //test
+        expect(find.text('Dynamic Visual Technologies'), findsOneWidget);
+        expect(find.text('Junior Software Developer'), findsOneWidget);
+        //expect(find.text('05/2024'), findsOneWidget);
+        //expect(find.text('current'), findsOneWidget);
         //expect(find.byType(ElevatedButton), findsOneWidget);
     });
 
@@ -99,8 +121,7 @@ void main() {
         //expect(find.text('04/2024'), findsOneWidget);
         //expect(find.byType(ElevatedButton), findsOneWidget);
     });
-
-
+    
     testWidgets('References page',
       (WidgetTester tester) async {
         //app.main();
@@ -124,6 +145,21 @@ void main() {
         //expect(find.text('04/2024'), findsOneWidget);
         //expect(find.byType(ElevatedButton), findsOneWidget);
     });
+
+    /*testWidgets('Profile page',
+      (WidgetTester tester) async {
+        //app.main();
+        await tester.pumpWidget(const MaterialApp(home: Profile()));
+        await tester.pumpAndSettle();
+        //do
+        await tester.enterText(find.byKey(const Key('description')), 'Final year BSc Computer Science student with experience in small-scale software engineering projects');
+        await tester.pumpAndSettle();
+
+        //test
+        expect(find.text('Final year BSc Computer Science student with experience in small-scale software engineering projects'), findsOneWidget);
+        
+    });*/
+    /* Home page*/
   });     
 }
  
