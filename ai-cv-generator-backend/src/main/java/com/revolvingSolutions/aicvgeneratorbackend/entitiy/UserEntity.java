@@ -1,6 +1,7 @@
 package com.revolvingSolutions.aicvgeneratorbackend.entitiy;
 
 import com.fasterxml.jackson.annotation.JsonManagedReference;
+import com.revolvingSolutions.aicvgeneratorbackend.converter.StringConverter;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -12,6 +13,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Set;
 
 @Data
 @Builder
@@ -26,13 +28,17 @@ public class UserEntity implements UserDetails {
     public Integer userid;
 
     @Column(nullable = false)
+    @Convert(converter = StringConverter.class)
     public String fname;
     @Column(nullable = false)
+    @Convert(converter = StringConverter.class)
     public String lname;
 
     @Column(unique = true,nullable = false)
+    @Convert(converter = StringConverter.class)
     public String username;
     @Column(nullable = false)
+    @Convert(converter = StringConverter.class)
     public String password;
 
     @OneToMany(mappedBy = "user",cascade = CascadeType.ALL)
@@ -51,12 +57,36 @@ public class UserEntity implements UserDetails {
     @JsonManagedReference
     public List<LinkEntity> links;
 
+    @OneToMany(mappedBy = "user",cascade = CascadeType.ALL)
+    public List<ReferenceEntity> references;
+
+    @OneToMany(mappedBy = "user",cascade = CascadeType.ALL)
+    public List<SkillEntity> skills;
+
+    @OneToMany(mappedBy = "user")
+    public Set<RegistrationTokenEntity> regTokens;
+
+    @OneToMany(mappedBy = "user")
+    public Set<PasswordTokenEntity> passwordResetToken;
+
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
+    @JsonManagedReference
+    public ChatMemory chatMemory;
+
     @Enumerated(EnumType.STRING)
     public Role role;
 
-    public String location;
-    public String phoneNumber;
+    private boolean enabled;
+
+    @Column(nullable = false,updatable = false)
+    @Convert(converter = StringConverter.class)
     public String email;
+
+    @Convert(converter = StringConverter.class)
+    public String location;
+    @Convert(converter = StringConverter.class)
+    public String phoneNumber;
+    @Convert(converter = StringConverter.class)
     public String description;
 
     @Override
@@ -95,6 +125,6 @@ public class UserEntity implements UserDetails {
     //Not doing override for non expired
     @Override
     public boolean isEnabled() {
-        return true;
+        return enabled;
     }
 }

@@ -11,18 +11,34 @@ const errorColour = Colors.red;
 const onErrorColour = Colors.black;
 const backgroundColour = Colors.white;
 const onBackgroundColour = Colors.black;
-var surfaceColour = Colors.grey.withOpacity(0.1);
+var surfaceColour = Colors.grey.shade200;
 const onSurfaceColour = Colors.black;
 
 ThemeData mainTheme = ThemeData(
+  dialogTheme: const DialogTheme(
+    backgroundColor: Colors.white
+  ),
+  cardTheme: const CardTheme(
+    surfaceTintColor: Colors.white,
+    color: Colors.white
+  ),
+  cardColor: Colors.white,
+  datePickerTheme: const DatePickerThemeData(
+    headerBackgroundColor: primaryColour,
+    backgroundColor: Colors.white,
+  ),
   inputDecorationTheme: InputDecorationTheme(
-    hintStyle: TextStyle(color: Colors.grey.withOpacity(0.7))
+    hintStyle: TextStyle(color: Colors.grey.shade500)
   ),
   buttonTheme: const ButtonThemeData(
     hoverColor: black,
     focusColor: black
   ),
+  drawerTheme: const DrawerThemeData(
+    backgroundColor: white
+  ),
   appBarTheme: const AppBarTheme(
+    color: primaryColour,
     toolbarTextStyle: TextStyle(fontSize: 16, color: white),
     actionsIconTheme: IconThemeData(color: white, size: 32),
     iconTheme: IconThemeData(color: white)
@@ -58,6 +74,11 @@ ThemeData mainTheme = ThemeData(
       TargetPlatform.windows: FadeUpwardsPageTransitionsBuilder()
     },
   ),
+);
+
+final darkTheme = ThemeData.dark(
+  
+
 );
 
 class SectionHeading extends StatefulWidget {
@@ -172,7 +193,8 @@ class SectionInput extends StatefulWidget {
   double? fontSize;
   double? height;
   double? width;
-  SectionInput({super.key, required this.controller, this.hint, this.fontSize, this.height, this.width});
+  int? maxLength;
+  SectionInput({super.key, required this.controller, this.hint, this.fontSize, this.height, this.width, this.maxLength});
   @override
   SectionInputState createState() => SectionInputState();
 }
@@ -181,7 +203,7 @@ class SectionInputState extends State<SectionInput> {
   TextStyle? hintStyle;
   @override
   void initState() {
-    hintStyle = TextStyle(fontSize: widget.fontSize, color: Colors.grey.withOpacity(0.7));
+    hintStyle = TextStyle(fontSize: widget.fontSize, color: Colors.grey.shade500);
     super.initState();
   }
 
@@ -191,10 +213,12 @@ class SectionInputState extends State<SectionInput> {
       height: widget.height,
       width: widget.width,
       child: TextFormField(
+        maxLength: widget.maxLength??90000,
         controller: widget.controller, 
         textAlign: TextAlign.right, 
         style:  widget.fontSize != null ? TextStyle(fontSize: widget.fontSize) : Theme.of(context).textTheme.titleMedium,
         decoration: InputDecoration(
+          counterText: "",
           border: InputBorder.none,
           hintStyle: hintStyle,
           hintText: widget.hint,

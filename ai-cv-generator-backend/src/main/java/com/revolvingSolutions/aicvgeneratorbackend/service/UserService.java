@@ -4,7 +4,10 @@ import com.revolvingSolutions.aicvgeneratorbackend.entitiy.*;
 import com.revolvingSolutions.aicvgeneratorbackend.exception.FileNotFoundException;
 import com.revolvingSolutions.aicvgeneratorbackend.exception.NotIndatabaseException;
 import com.revolvingSolutions.aicvgeneratorbackend.exception.UnknownErrorException;
-import com.revolvingSolutions.aicvgeneratorbackend.model.*;
+import com.revolvingSolutions.aicvgeneratorbackend.model.file.FileModel;
+import com.revolvingSolutions.aicvgeneratorbackend.model.file.FileModelBase64;
+import com.revolvingSolutions.aicvgeneratorbackend.model.file.FileModelForList;
+import com.revolvingSolutions.aicvgeneratorbackend.model.user.*;
 import com.revolvingSolutions.aicvgeneratorbackend.repository.*;
 import com.revolvingSolutions.aicvgeneratorbackend.request.details.employment.AddEmploymentRequest;
 import com.revolvingSolutions.aicvgeneratorbackend.request.details.employment.UpdateEmploymentRequest;
@@ -14,10 +17,17 @@ import com.revolvingSolutions.aicvgeneratorbackend.request.details.link.UpdateLi
 import com.revolvingSolutions.aicvgeneratorbackend.request.details.qualification.AddQualificationRequest;
 import com.revolvingSolutions.aicvgeneratorbackend.request.details.qualification.RemoveQualificationRequest;
 import com.revolvingSolutions.aicvgeneratorbackend.request.details.qualification.UpdateQualificationRequest;
+import com.revolvingSolutions.aicvgeneratorbackend.request.details.reference.AddReferenceRequest;
+import com.revolvingSolutions.aicvgeneratorbackend.request.details.reference.RemoveReferenceRequest;
+import com.revolvingSolutions.aicvgeneratorbackend.request.details.reference.UpdateReferenceRequest;
+import com.revolvingSolutions.aicvgeneratorbackend.request.details.skill.AddSkillRequest;
+import com.revolvingSolutions.aicvgeneratorbackend.request.details.skill.RemoveSkillRequest;
+import com.revolvingSolutions.aicvgeneratorbackend.request.details.skill.UpdateSkillRequest;
 import com.revolvingSolutions.aicvgeneratorbackend.request.file.DownloadFileRequest;
 import com.revolvingSolutions.aicvgeneratorbackend.request.details.employment.RemoveEmploymentRequest;
 import com.revolvingSolutions.aicvgeneratorbackend.request.user.GenerateUrlRequest;
 import com.revolvingSolutions.aicvgeneratorbackend.request.user.UpdateUserRequest;
+import com.revolvingSolutions.aicvgeneratorbackend.response.auth.Code;
 import com.revolvingSolutions.aicvgeneratorbackend.response.details.employment.AddEmploymentResponse;
 import com.revolvingSolutions.aicvgeneratorbackend.response.details.employment.RemoveEmploymentResponse;
 import com.revolvingSolutions.aicvgeneratorbackend.response.details.employment.UpdateEmploymentResponse;
@@ -27,12 +37,20 @@ import com.revolvingSolutions.aicvgeneratorbackend.response.details.link.UpdateL
 import com.revolvingSolutions.aicvgeneratorbackend.response.details.qualification.AddQualificationResponse;
 import com.revolvingSolutions.aicvgeneratorbackend.response.details.qualification.RemoveQualificationResponse;
 import com.revolvingSolutions.aicvgeneratorbackend.response.details.qualification.UpdateQualificationResponse;
+import com.revolvingSolutions.aicvgeneratorbackend.response.details.reference.AddReferenceResponse;
+import com.revolvingSolutions.aicvgeneratorbackend.response.details.reference.RemoveReferenceResponse;
+import com.revolvingSolutions.aicvgeneratorbackend.response.details.reference.UpdateReferenceResponse;
+import com.revolvingSolutions.aicvgeneratorbackend.response.details.skill.AddSkillResponse;
+import com.revolvingSolutions.aicvgeneratorbackend.response.details.skill.RemoveSkillResponse;
+import com.revolvingSolutions.aicvgeneratorbackend.response.details.skill.UpdateSkillResponse;
 import com.revolvingSolutions.aicvgeneratorbackend.response.file.GetFilesResponse;
+import com.revolvingSolutions.aicvgeneratorbackend.response.file.UploadFileResponse;
 import com.revolvingSolutions.aicvgeneratorbackend.response.user.GenerateUrlResponse;
 import com.revolvingSolutions.aicvgeneratorbackend.response.user.GetUserResponse;
 import com.revolvingSolutions.aicvgeneratorbackend.response.user.UpdateUserResponse;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
@@ -44,9 +62,10 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
-import java.util.Date;
-import java.time.Instant;
-import java.util.List;
+
+import java.io.IOException;
+import java.time.LocalDateTime;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
@@ -57,10 +76,16 @@ public class UserService {
     private final EmploymentRepository employmentRepository;
     private final QualificationRepository qualificationRepository;
     private final LinkRepository linkRepository;
+    private final ReferenceRepository referenceRepository;
+    private final SkillRepository skillRepository;
     private final ShareRepository shareRepository;
     private final ProfileImageRepository profileImageRepository;
+    private final UUIDGenerator generator;
 
     private final PasswordEncoder encoder;
+
+    @Value("${app.frontend.url}")
+    private String url;
     public GetUserResponse getUser() {
         UserEntity dbuser = getAuthenticatedUser();
         return GetUserResponse.builder()
@@ -76,6 +101,8 @@ public class UserService {
                                 .employmenthistory(getEmployments())
                                 .qualifications(getQualifications())
                                 .links(getLinks())
+                                .references(getReferences())
+                                .skills(getSkills())
                                 .build()
                 )
                 .build();
@@ -126,6 +153,37 @@ public class UserService {
                 .build();
     }
 
+    public AddReferenceResponse addReference(
+            AddReferenceRequest request
+    ) {
+        referenceRepository.saveAndFlush(
+                ReferenceEntity.builder()
+                        .user(getAuthenticatedUser())
+                        .description(request.getReference().getDescription())
+                        .contact(request.getReference().getContact())
+                        .build()
+        );
+        return AddReferenceResponse.builder()
+                .references(getReferences())
+                .build();
+    }
+
+    public AddSkillResponse addSkill(
+            AddSkillRequest request
+    ) {
+        skillRepository.saveAndFlush(
+                SkillEntity.builder()
+                        .user(getAuthenticatedUser())
+                        .level(request.getSkill().getLevel())
+                        .skill(request.getSkill().getSkill())
+                        .reason(request.getSkill().getReason())
+                        .build()
+        );
+        return AddSkillResponse.builder()
+                .skills(getSkills())
+                .build();
+    }
+
 
     public RemoveEmploymentResponse removeEmployment(
             RemoveEmploymentRequest request
@@ -158,8 +216,6 @@ public class UserService {
             RemoveLinkRequest request
     ) {
         try {
-
-
             linkRepository.deleteById(request.getLink().getLinkid());
             linkRepository.flush();
             return RemoveLinkResponse.builder()
@@ -167,6 +223,34 @@ public class UserService {
                     .build();
         } catch (Exception e) {
             throw  new NotIndatabaseException("Link missing "+e.getMessage());
+        }
+    }
+
+    public RemoveReferenceResponse removeReference(
+            RemoveReferenceRequest request
+    ) {
+        try {
+            referenceRepository.deleteById(request.getReference().getRefid());
+            referenceRepository.flush();
+            return RemoveReferenceResponse.builder()
+                    .references(getReferences())
+                    .build();
+        } catch (Exception e) {
+            throw new NotIndatabaseException("Reference missing "+e.getMessage());
+        }
+    }
+
+    public RemoveSkillResponse removeSkill(
+            RemoveSkillRequest request
+    ) {
+        try {
+            skillRepository.deleteById(request.getSkill().getSkillid());
+            skillRepository.flush();
+            return RemoveSkillResponse.builder()
+                    .skills(getSkills())
+                    .build();
+        } catch (Exception e) {
+            throw new NotIndatabaseException("Skill missing "+e.getMessage());
         }
     }
 
@@ -261,6 +345,39 @@ public class UserService {
         }
     }
 
+    public UpdateReferenceResponse updateReference_(
+            UpdateReferenceRequest request
+    ) {
+        try {
+            ReferenceEntity prev = referenceRepository.getReferenceById(request.getReference().getRefid());
+            prev.setDescription(request.getReference().getDescription());
+            prev.setContact(request.getReference().getContact());
+            referenceRepository.saveAndFlush(prev);
+            return UpdateReferenceResponse.builder()
+                    .references(getReferences())
+                    .build();
+        } catch (Exception e) {
+            throw new NotIndatabaseException("Reference missing "+e.getMessage());
+        }
+    }
+
+    public UpdateSkillResponse updateSkill_(
+            UpdateSkillRequest request
+    ) {
+        try {
+            SkillEntity prev = skillRepository.getReferenceById(request.getSkill().getSkillid());
+            prev.setSkill(request.getSkill().getSkill());
+            prev.setLevel(request.getSkill().getLevel());
+            prev.setReason(request.getSkill().getReason());
+            skillRepository.saveAndFlush(prev);
+            return UpdateSkillResponse.builder()
+                    .skills(getSkills())
+                    .build();
+        } catch (Exception e) {
+            throw new NotIndatabaseException("Skill missing "+e.getMessage());
+        }
+    }
+
     public List<Employment> getEmployments() {
         return employmentRepository.getEmploymentHistoryFromUser(getAuthenticatedUser().getUsername());
     }
@@ -273,12 +390,19 @@ public class UserService {
         return linkRepository.getLinksFromUser(getAuthenticatedUser().getUsername());
     }
 
+    public List<Reference> getReferences() {
+        return referenceRepository.getReferencesFromUser(getAuthenticatedUser().getUsername());
+    }
+
+    public List<Skill> getSkills() {
+        return skillRepository.getSkillsFromUser(getAuthenticatedUser().getUsername());
+    }
+
     public UpdateUserResponse updateUser(UpdateUserRequest request) {
         UserEntity user = getAuthenticatedUser();
         user.setFname(request.getUser().getFname());
         user.setLname(request.getUser().getLname());
         user.setUsername(request.getUser().getUsername());
-        user.setEmail(request.getUser().getEmail());
         user.setLocation(request.getUser().getLocation());
         user.setPhoneNumber(request.getUser().getPhoneNumber());
         user.setDescription(request.getUser().getDescription());
@@ -293,8 +417,17 @@ public class UserService {
     @Transactional
     public GetFilesResponse getFiles() {
         List<FileModelForList> files = fileRepository.getFilesFromUser(getAuthenticatedUser().getUsername());
+        List<FileModelBase64> newFiles = new ArrayList<>();
+        for (FileModelForList file : files) {
+            newFiles.add(
+                FileModelBase64.builder()
+                .filename(file.getFilename())
+                .cover(Base64.getEncoder().encodeToString(file.getCover()))
+                .build()
+            );
+        }
         return GetFilesResponse.builder()
-                .files(files)
+                .files(newFiles)
                 .build();
     }
 
@@ -333,7 +466,12 @@ public class UserService {
             return ResponseEntity.notFound().build();
         }
     }
-    public String uploadFile(MultipartFile request, MultipartFile cover) {
+    public UploadFileResponse uploadFile(MultipartFile request, MultipartFile cover) {
+        if (!fileRepository.getFileFromUser(getAuthenticatedUser().getUsername(),request.getOriginalFilename()).isEmpty()) {
+            return UploadFileResponse.builder()
+                    .code(Code.failed)
+                    .build();
+        }
         try {
             FileEntity file = FileEntity.builder()
                     .user(getAuthenticatedUser())
@@ -343,9 +481,13 @@ public class UserService {
                     .cover(cover.getBytes())
                     .build();
             fileRepository.save(file);
-            return "Success";
+            return UploadFileResponse.builder()
+                    .code(Code.success)
+                    .build();
         } catch (Exception e) {
-            throw new UnknownErrorException("File exception!: "+e.getMessage());
+            return UploadFileResponse.builder()
+                    .code(Code.failed)
+                    .build();
         }
     }
 
@@ -365,7 +507,7 @@ public class UserService {
                             .filetype(file.getFiletype())
                             .filename(file.getFilename())
                             .data(file.getData())
-                            .ExpireDate(Date.from(Instant.now().plusMillis(request.getDuration().toMillis())))
+                            .ExpireDate(LocalDateTime.now().plus(request.getDuration()))
                             .build()
             );
             return GenerateUrlResponse.builder()
@@ -376,23 +518,25 @@ public class UserService {
         }
     }
 
-    public GenerateUrlResponse generateUrlFromFile(String base, MultipartFile file, Date date) {
-        try {
+
+    @Transactional
+    public GenerateUrlResponse generateUrlFromFile(MultipartFile file, Integer hours) throws IOException {
             update();
+            UUID id = generator.generateID();
             shareRepository.save(
-                    ShareEntity.builder()
-                            .filetype(file.getContentType())
-                            .filename(file.getOriginalFilename())
-                            .data(file.getBytes())
-                            .ExpireDate(date)
-                            .build()
+                ShareEntity.builder()
+                        .uuid(id)
+                        .filetype(file.getContentType())
+                        .filename(file.getName())
+                        .data(file.getBytes())
+                        .ExpireDate(LocalDateTime.now().plusHours(hours))
+                        .build()
             );
+
             return GenerateUrlResponse.builder()
-                    .generatedUrl(base+"share/"+shareRepository.findByFilename(file.getOriginalFilename()).orElseThrow().getUuid().toString())
+                    .generatedUrl(url+"/share/"+id)
                     .build();
-        } catch (Exception e) {
-            throw new UnknownErrorException("File exception!: "+e.getMessage());
-        }
+
     }
 
     @Transactional
@@ -448,14 +592,13 @@ public class UserService {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (!(authentication instanceof AnonymousAuthenticationToken)) {
             String currentUserName = authentication.getName();
-            var user_ = userRepository.findByUsername(currentUserName).orElseThrow();
-            return user_;
+            return userRepository.findByUsername(currentUserName).orElseThrow();
         }
         throw new UnknownErrorException("This should not be possible");
     }
 
     private void update() {
-        shareRepository.deleteAllInBatch(shareRepository.getExpiredURLs(java.util.Date.from(Instant.now())));
+        shareRepository.deleteAllInBatch(shareRepository.getExpiredURLs(LocalDateTime.now()));
         shareRepository.flush();
     }
 }
